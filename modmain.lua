@@ -13,6 +13,7 @@ t.UpdateLogFileName = "updatelog.txt"
 t.MainPOfilename = "russian.po"
 t.ROG_POfilename = "ROG.po"
 t.SW_POfilename = "SW.po"
+t.H_POfilename = "H.po"
 t.UpdatePeriod = {"OncePerLaunch","OncePerDay","OncePerWeek","OncePerMonth","Never"}
 t.SteamURL = "http://steamcommunity.com/sharedfiles/filedetails/?id=207427039"
 
@@ -33,6 +34,7 @@ GetPlayer = GLOBAL.GetPlayer
 
 t.ROG_Installed = rawget(GLOBAL,"REIGN_OF_GIANTS") and GLOBAL.IsDLCEnabled and GLOBAL.IsDLCEnabled(GLOBAL.REIGN_OF_GIANTS)
 t.SW_Installed = rawget(GLOBAL,"CAPY_DLC") and GLOBAL.IsDLCEnabled and GLOBAL.IsDLCEnabled(GLOBAL.CAPY_DLC)
+t.H_Installed = rawget(GLOBAL,"H_DLC") and GLOBAL.IsDLCEnabled and GLOBAL.IsDLCEnabled(GLOBAL.H_DLC)
 
 
 
@@ -82,6 +84,11 @@ if t.StorePath and t.StorePath~=MODROOT then
 		if GLOBAL.kleifileexists(MODROOT..t.SW_POfilename)
 		   and (not GLOBAL.kleifileexists(t.StorePath..t.SW_POfilename) or GetPoFileVersion(t.StorePath..t.SW_POfilename)~=modinfo.version) then
 			copyfile(MODROOT..t.SW_POfilename,t.StorePath..t.SW_POfilename)
+		end
+		-- Проверяем H po файл
+		if GLOBAL.kleifileexists(MODROOT..t.H_POfilename)
+		   and (not GLOBAL.kleifileexists(t.StorePath..t.H_POfilename) or GetPoFileVersion(t.StorePath..t.H_POfilename)~=modinfo.version) then
+			copyfile(MODROOT..t.H_POfilename,t.StorePath..t.H_POfilename)
 		end
 	end
 
@@ -171,24 +178,24 @@ end
 
 
 --Проверяем версию по файла, и если она не соответствует текущей версии, то отключаем перевод
-local poversion=GetPoFileVersion(t.StorePath..t.MainPOfilename)
-if poversion~=modinfo.version then
-	local OldStart=GLOBAL.Start --Переопределяем функцию, после выполнения которой можно будет вывести попап.
-	function Start() 
-		OldStart()
-		ApplyRussianFonts()
-		local a,b="/","\\"
-		if GLOBAL.PLATFORM == "NACL" or GLOBAL.PLATFORM == "PS4" or GLOBAL.PLATFORM == "LINUX_STEAM" or GLOBAL.PLATFORM == "OSX_STEAM" then
-			a,b=b,a
-		end
-		local text="Версия игры: "..modinfo.version..", версия PO файла: "..poversion.."\nПуть: "..string.gsub(GLOBAL.CWD..t.StorePath,a,b)..t.MainPOfilename.."\nПеревод текста отключён."
-		local PopupDialogScreen = require "screens/popupdialog"
-	        GLOBAL.TheFrontEnd:PushScreen(PopupDialogScreen("Неверная версия PO файла", text,
-			{{text="Понятно", cb = function() GLOBAL.TheFrontEnd:PopScreen() end}}))
-	end
-	GLOBAL.Start=Start
-	return
-end
+-- local poversion=GetPoFileVersion(t.StorePath..t.MainPOfilename)
+-- if poversion~=modinfo.version then
+	-- local OldStart=GLOBAL.Start --Переопределяем функцию, после выполнения которой можно будет вывести попап.
+	-- function Start() 
+		-- OldStart()
+		-- ApplyRussianFonts()
+		-- local a,b="/","\\"
+		-- if GLOBAL.PLATFORM == "NACL" or GLOBAL.PLATFORM == "PS4" or GLOBAL.PLATFORM == "LINUX_STEAM" or GLOBAL.PLATFORM == "OSX_STEAM" then
+			-- a,b=b,a
+		-- end
+		-- local text="Версия игры: "..modinfo.version..", версия PO файла: "..poversion.."\nПуть: "..string.gsub(GLOBAL.CWD..t.StorePath,a,b)..t.MainPOfilename.."\nПеревод текста отключён."
+		-- local PopupDialogScreen = require "screens/popupdialog"
+	        -- GLOBAL.TheFrontEnd:PushScreen(PopupDialogScreen("Неверная версия PO файла", text,
+			-- {{text="Понятно", cb = function() GLOBAL.TheFrontEnd:PopScreen() end}}))
+	-- end
+	-- GLOBAL.Start=Start
+	-- return
+-- end
 
 
 --Функция проверяет файл language.lua на наличие подключения po файла и старых версий русификации
@@ -356,7 +363,7 @@ function t.ChaptersListInit()
 	{id="181140", text="Описания рецептов",			name="recipies",		potype="main"},
 	{id="192218", text="Правила склонений и другие мелочи",	name="private",			potype="main"}  
 	}
-	if t.ROG_Installed or t.SW_Installed then
+	if t.ROG_Installed or t.SW_Installed or t.H_Installed then
 		table.insert(tbl,{id="210434", text="ROG Реплики Веббера",	name="DLC1_speech_webber",	potype="ROG"})
 		table.insert(tbl,{id="210433", text="ROG Реплики Вигфрид",	name="DLC1_speech_wathgrithr",	potype="ROG"})
 		table.insert(tbl,{id="225881", text="ROG Реплики Максвелла",	name="DLC1_speech_maxwell",	potype="ROG"})
@@ -879,6 +886,23 @@ function ApplyROG_SWRussification()
 			end
 			--Загружаем PO для SW
 			LoadPOFile(t.StorePath..t.SW_POfilename, "ru")
+			--Объединяем строки перевода
+			for i,v in pairs(rustemp) do
+				if not GLOBAL.LanguageTranslator.languages["ru"][i] then
+					GLOBAL.LanguageTranslator.languages["ru"][i]=v
+				end
+			end
+			rustemp=nil
+		end
+		
+		if t.H_Installed then
+			--Снова делаем бэкап строк перевода
+			local rustemp={}
+			for i,v in pairs(GLOBAL.LanguageTranslator.languages["ru"]) do
+				rustemp[i]=v
+			end
+			--Загружаем PO для SW
+			LoadPOFile(t.StorePath..t.H_POfilename, "ru")
 			--Объединяем строки перевода
 			for i,v in pairs(rustemp) do
 				if not GLOBAL.LanguageTranslator.languages["ru"][i] then

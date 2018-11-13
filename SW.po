@@ -1,5 +1,5 @@
 # http://notabenoid.com/book/45556/
-# Версия 4.1
+# Версия 1.0
 
 msgid ""
 msgstr ""
